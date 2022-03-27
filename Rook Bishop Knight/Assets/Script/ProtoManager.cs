@@ -4,7 +4,7 @@ using UnityEngine;
 using System.Text;
 using UnityEngine.UI;
 
-enum itemdata
+public enum itemdata
 {
     empty = 0,
     rook = 1,
