@@ -702,7 +702,7 @@ public class MapManager : MonoBehaviour
                 Aces[aceInd].SetActive(true);
                 aceInd++;
                 break;
-            case itemdata.destintaion:
+            case itemdata.enemy:
                 OnStage = 2;
                 nowStage++;
                 break;

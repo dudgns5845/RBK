@@ -5215,7 +5215,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Stages:
   - "0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t8\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0
-    0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t1\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 "
+    8\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t8\t0 0\t0\t0\t1\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 "
   - "0\t0\t0\t9\t9\t0\t0\t0 0\t1\t0\t9\t9\t0\t8\t0 0\t0\t0\t9\t9\t0\t0\t0 0\t0\t0\t9\t9\t0\t0\t0
     0\t0\t0\t9\t9\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 0\t0\t0\t0\t0\t0\t0\t0 "
   - "9\t9\t9\t9\t0\t0\t0\t0 9\t9\t9\t9\t0\t0\t8\t0 9\t9\t9\t9\t0\t0\t0\t0 9\t9\t9\t9\t0\t0\t0\t0
@@ -7974,7 +7974,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &1367366461
 MeshRenderer:
   m_ObjectHideFlags: 0

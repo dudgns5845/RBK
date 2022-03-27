@@ -14,7 +14,7 @@ enum itemdata
     queen = 5,
     jack = 6,
     ace = 7,
-    destintaion = 8,
+    enemy = 8,
     hole = 9
 }
 
@@ -724,9 +724,8 @@ public class ProtoManager : MonoBehaviour
                 Aces[aceInd].SetActive(true);
                 aceInd++;
                 break;
-            case itemdata.destintaion:
-                OnStage = 2;
-                nowStage++;
+            case itemdata.enemy:
+                KillEnemy();
                 break;
         }
     }
@@ -943,6 +942,25 @@ public class ProtoManager : MonoBehaviour
             }
         }
      }
+
+    void KillEnemy()//적 유닛 잡았을 경우
+    {
+        int Ecount;
+        Ecount = 0;
+        for(int i = 0; i < Mapobject.Length; i++)
+        {
+            if(Mapobject[i] != null && Mapobject[i].GetComponent<itemData>().data == 8)
+            {
+                Ecount++;
+            }
+        }
+        if (Ecount == 1)
+        {
+            OnStage = 2;
+            nowStage++;
+        }
+
+    }
 
     /*
     void FadeStartPanel()
