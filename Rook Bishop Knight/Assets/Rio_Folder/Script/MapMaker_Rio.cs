@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MapMaker_Rio : MonoBehaviour
@@ -39,6 +40,8 @@ public class MapMaker_Rio : MonoBehaviour
         {
             Map += ((int)tile.index).ToString();
         }
-        print(Map);
+        PlayerPrefs.SetString("Mapdata", Map);
+        SceneManager.LoadScene("PlayScene");
+        //print(Map);
     }
 }

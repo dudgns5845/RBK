@@ -799,7 +799,10 @@ public class ProtoManager : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out hit, 100f) && hit.transform.gameObject.name == "panel")
             {
-                SetStage(Stages[nowStage]);
+                //MapMaker테스트를 위해 주석처리
+                //SetStage(Stages[nowStage]);
+                string Mapdata = PlayerPrefs.GetString("Mapdata");
+                SetStage(Mapdata);
             }
         }
     }
