@@ -10,12 +10,10 @@ public class TileInfo : MonoBehaviour
     public itemdata index = itemdata.hole;
     Button Btn_Tile;
     public Image image;
-
+    public Image SubImage;
 
     private void Start()
     {
-        image = GetComponentInChildren<Image>();
-        
         Btn_Tile = GetComponent<Button>();
         Btn_Tile.onClick.AddListener(TileClick);
     }
@@ -23,29 +21,38 @@ public class TileInfo : MonoBehaviour
     //타일을 선택했을때 아이템 버튼 클릭 정보를 가져와 상태를 변화시킨다.
     void TileClick()
     {
-        GetComponent<Image>().color = Color.red;
-        //Btn_Tile.image.color = Color.red;
-        
+        index = MapMaker_Rio.instance.nowState;
         switch (MapMaker_Rio.instance.nowState)
         {
+          
             case itemdata.empty:
+                image.gameObject.SetActive(true);
                 break;
             case itemdata.hole:
+                SubImage.color = Color.clear;
+                image.gameObject.SetActive(false);
                 break;
-            case itemdata.rook:
+
+            default:
+                image.gameObject.SetActive(true);
+                SubImage.sprite = MapMaker_Rio.instance.sprites[(int)index];
+                SubImage.color = Color.white;
                 break;
-            case itemdata.bishop:
-                break;
-            case itemdata.knight:
-                break;
-            case itemdata.king:
-                break;
-            case itemdata.queen:
-                break;
-            case itemdata.jack:
-                break;
-            case itemdata.enemy:
-                break;
+
+            //case itemdata.rook:
+            //    break;
+            //case itemdata.bishop:
+            //    break;
+            //case itemdata.knight:
+            //    break;
+            //case itemdata.king:
+            //    break;
+            //case itemdata.queen:
+            //    break;
+            //case itemdata.jack:
+            //    break;
+            //case itemdata.enemy:
+            //    break;
         }
     }
 }

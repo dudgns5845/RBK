@@ -18,6 +18,7 @@ public class MapMaker_Rio : MonoBehaviour
 
     public void ResetBTN(itemdata btn)
     {
+        nowState = btn;
         int idx = (int)btn;
         for(int i = 0; i < ItemButtons.Count; i++)
         {

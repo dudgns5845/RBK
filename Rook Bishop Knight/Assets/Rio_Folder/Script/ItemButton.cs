@@ -10,7 +10,8 @@ public class ItemButton : MonoBehaviour
 
     private void Start()
     {
-        BTN =GetComponent<Button>();
+        idx = (itemdata)Enum.Parse(typeof(itemdata), gameObject.name);
+        BTN = GetComponent<Button>();
         BTN.onClick.AddListener(ClickBTN);
     }
 
@@ -18,7 +19,7 @@ public class ItemButton : MonoBehaviour
     {
         //GetComponent<Image>().color = Color.red;
         MapMaker_Rio.instance.ResetBTN((itemdata)Enum.Parse(typeof(itemdata), gameObject.name));
-        MapMaker_Rio.instance.nowState = (itemdata)Enum.Parse(typeof(itemdata), gameObject.name);
-        print(MapMaker_Rio.instance.nowState.ToString());
+        //MapMaker_Rio.instance.nowState = (itemdata)Enum.Parse(typeof(itemdata), gameObject.name);
+        //print(MapMaker_Rio.instance.nowState.ToString());
     }
 }
