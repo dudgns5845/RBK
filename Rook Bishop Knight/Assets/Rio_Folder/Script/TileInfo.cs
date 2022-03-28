@@ -23,6 +23,9 @@ public class TileInfo : MonoBehaviour
     //타일을 선택했을때 아이템 버튼 클릭 정보를 가져와 상태를 변화시킨다.
     void TileClick()
     {
+        GetComponent<Image>().color = Color.red;
+        //Btn_Tile.image.color = Color.red;
+        
         switch (MapMaker_Rio.instance.nowState)
         {
             case itemdata.empty:
