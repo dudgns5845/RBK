@@ -9,6 +9,7 @@ public class MapMaker_Rio : MonoBehaviour
 
     public List<Button> ItemButtons;
     public List<Sprite> sprites;
+    public List<TileInfo> Tiles;
     public itemdata nowState;
 
     private void Awake()
@@ -28,5 +29,16 @@ public class MapMaker_Rio : MonoBehaviour
                 ItemButtons[i].image.color = Color.white;
             }
         }
+    }
+
+    public void SaveMap()
+    {
+        string Map = "";
+
+        foreach (var tile in Tiles)
+        {
+            Map += ((int)tile.index).ToString();
+        }
+        print(Map);
     }
 }
