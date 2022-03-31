@@ -71,8 +71,8 @@ public class ProtoManager : MonoBehaviour
     private int rouletteangle;//룰렛 목표 각도
     public float rotateSpeed;//룰렛 회전 속도
 
-
-
+    /*맵 에딧 관련*/
+    public int nowitem;
 
     /*장식 요소*/
 
@@ -99,6 +99,7 @@ public class ProtoManager : MonoBehaviour
     public Material Gray;
     public Material Red;
     public Material Blue;
+    public Material trans;
 
     //클리어시 별
     [Header("Stars")]
@@ -119,6 +120,9 @@ public class ProtoManager : MonoBehaviour
     //BGM 버튼
     public Renderer MusicButton; //음표 마크 렌더러, 음악 켜지거나 꺼지면 색상 바꾸기 위해 사용
 
+    //MapEdit 버튼
+    public Renderer EditButton; //맵에딧 버튼 배경
+
     //배경 skybox 색상들
     public Color[] bgColors;//배경 색상들
 
@@ -127,6 +131,7 @@ public class ProtoManager : MonoBehaviour
 
     void Start()//값 초기화, 맵 큐브 정보 저장
     {
+        LoadMap();
         isHole = false;
         aceSelecting = false;
         //fading = false;
@@ -173,6 +178,10 @@ public class ProtoManager : MonoBehaviour
         {
             ShowResult();
         }
+        else if (OnStage == 3)//맵에딧
+        {
+            MapEdit();
+        }
 
         if(OnStage != 2)//클리어가 아닌경우엔 결과창 치워두기
         {
@@ -180,6 +189,7 @@ public class ProtoManager : MonoBehaviour
         }
         RotateRoulette();//룰렛 각도 목표 각도로 돌리기
         MusicClick();//음악버튼 눌렀는지 확인
+        MapEditClick();//맵에딧 버튼 눌렸는지 확인
 
         /*
         if (StartPanel != null)
@@ -196,8 +206,20 @@ public class ProtoManager : MonoBehaviour
             if(Cubes[i].activeInHierarchy == false)//이전 스테이지에서 구멍이었던 부분 메우기
             {
                 Cubes[i].SetActive(true);
+                int alphabet;
+                int num;
+                alphabet = Mathf.FloorToInt(i / 8);
+                num = i % 8;
+                if ((alphabet + num) % 2 == 1)
+                {
+                    Cubes[i].GetComponent<Renderer>().material = black;
+                }
+                else
+                {
+                    Cubes[i].GetComponent<Renderer>().material = white;
+                }
             }
-            SetGrid(0, i);
+            Destroy(Mapobject[i]);
         }
         DeSelectAll();//비선택 색상으로 바꿔주기
         readytoMove = false;
@@ -248,7 +270,10 @@ public class ProtoManager : MonoBehaviour
         {
             BlockRumbleSor.Play();
         }
-        OnStage = 1;
+        if(OnStage != 3)
+        {
+            OnStage = 1;
+        }
     }
 
     void SetGrid(itemdata item, int index)//좌표로 아이템 가져오기
@@ -261,24 +286,31 @@ public class ProtoManager : MonoBehaviour
         }
         if((int)item == 9)//구멍인 경우
         {
-            Cubes[index].SetActive(false);
-            Mapobject[index] = GameObject.Instantiate(items[(int)item], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
-            ParticleSystemRenderer ps = Mapobject[index].GetComponent<ParticleSystemRenderer>();
-            if ((alphabet + num) % 2 == 1)
+            if (OnStage != 3)
             {
-                ps.material = white;
+                Cubes[index].SetActive(false);
+                Mapobject[index] = GameObject.Instantiate(items[(int)item], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
+                ParticleSystemRenderer ps = Mapobject[index].GetComponent<ParticleSystemRenderer>();
+                if ((alphabet + num) % 2 == 1)
+                {
+                    ps.material = black;
+                }
+                else
+                {
+                    ps.material = white;
+                }
+                Mapobject[index].GetComponent<ParticleSystem>().Play();
+                if (!isHole)
+                {
+                    isHole = true;
+                }
             }
             else
             {
-                ps.material = black;
-            }
-            Mapobject[index].GetComponent<ParticleSystem>().Play();
-            if (!isHole)
-            {
-                isHole = true;
+                Cubes[index].GetComponent<Renderer>().material = trans;
             }
         }
-        if ((int)item != 0)//빈칸이 아니면 아이템 소환
+        else if ((int)item != 0)//빈칸이 아니면 아이템 소환
         {
             Mapobject[index] = GameObject.Instantiate(items[(int)item], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
             if ((int)item > 0 && (int)item < 4)//플레이어 말 확인시
@@ -303,6 +335,17 @@ public class ProtoManager : MonoBehaviour
                         rouletteParts[2].GetComponent<Renderer>().material = white;
                         break;
                 }
+            }
+        }
+        if(OnStage == 3 && (int)item == 0)//맵에딧 중에 칸을 배치한 경우
+        {
+            if ((alphabet + num) % 2 == 1)
+            {
+                Cubes[index].GetComponent<Renderer>().material = black;
+            }
+            else
+            {
+                Cubes[index].GetComponent<Renderer>().material = white;
             }
         }
     }
@@ -348,7 +391,7 @@ public class ProtoManager : MonoBehaviour
         }
     }
 
-    void Move()//목적지 클릭시 이동 시작
+    void CheckBlockClick()//목적지 클릭시 이동 시작
     {
         if (readytoMove)
         {
@@ -919,7 +962,7 @@ public class ProtoManager : MonoBehaviour
                             break;
                     }
                 }
-                if(hit.transform.gameObject.name == "MusicButton")
+                if(hit.transform.gameObject.name == "MusicButton" || hit.transform.gameObject.name == "MapEditButton")
                 {
                     return;
                 }
@@ -938,7 +981,7 @@ public class ProtoManager : MonoBehaviour
             }
             else
             {
-                Move();
+                CheckBlockClick();
             }
         }
      }
@@ -1056,7 +1099,7 @@ public class ProtoManager : MonoBehaviour
      }
     void RetryClick()//재시도 클릭 확인
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && OnStage != 3)
         {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -1100,5 +1143,79 @@ public class ProtoManager : MonoBehaviour
             }
         }
 
+    }
+
+    void MapEditClick()
+    {
+        if (OnStage != 0 && Input.GetMouseButtonDown(0))
+        {
+            RaycastHit hit;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out hit, 100f))
+            {
+                if (hit.transform.gameObject.name == "MapEditButton")
+                {
+                    SaveSystem.SaveStage(this);
+                    if (OnStage != 3)
+                    {
+                        OnStage = 3;
+                        EditButton.material = white;
+                        SetStage(Stages[nowStage]);
+                        Camera.main.backgroundColor = Color.black;
+                    }
+                    else
+                    {
+                        LoadMap();
+                        OnStage = 0;
+                        EditButton.material = black;
+                        Camera.main.backgroundColor = bgColors[nowStage % bgColors.Length];
+                    }
+                }
+            }
+        }
+    }
+
+    void MapEdit()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
+        {
+            nowitem = 0;
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9))
+        {
+            nowitem = 9;
+        }
+
+        if (Input.GetMouseButton(0))
+        {
+            RaycastHit hit;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out hit, 100f))
+            {
+                if (hit.transform.gameObject.tag == "cube")
+                {
+                    int targetInd = hit.transform.gameObject.GetComponent<cubeData>().index;
+                    SetGrid((itemdata)nowitem, targetInd);
+
+                    StringBuilder sb = new StringBuilder(Stages[nowStage]);
+                    sb.Replace("\t", "");
+                    sb.Replace("\n", "");
+                    sb.Replace(" ", "");
+                    for (int i = 0; i < 64; i++)
+                    {
+                        SetGrid((itemdata)(sb[i] - '0'), i);
+                    }
+                    sb[targetInd] = (char)(nowitem + (int)'0');
+                    Stages[nowStage] = sb.ToString();
+                }
+            }
+        }
+    }
+
+    void LoadMap()
+    {
+        DataSaver data = SaveSystem.LoadStage();
+
+        Stages = data.mapdata;
     }
 }
