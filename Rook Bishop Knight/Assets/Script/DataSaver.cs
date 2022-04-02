@@ -5,10 +5,14 @@ using UnityEngine;
 [System.Serializable]
 public class DataSaver
 {
-    public string[] mapdata;
+    public List<string> Stages;//스테이지 데이터 배열
+    public List<string> FlavorText;//스테이지 이름 목록
+    public List<int> BestRes;//스테이지별 최저 이동수
 
     public DataSaver(ProtoManager pm)
     {
-        mapdata = pm.Stages;
+        Stages = pm.Stages;
+        FlavorText = pm.FlavorText;
+        BestRes = pm.BestRes;
     }
 }

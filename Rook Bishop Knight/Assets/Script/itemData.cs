@@ -4,5 +4,5 @@ using UnityEngine;
 
 public class itemData : MonoBehaviour
 {
-    public int data;
+    public char data;
 }

@@ -4,26 +4,27 @@ using UnityEngine;
 using System.Text;
 using UnityEngine.UI;
 
-enum itemdata
+enum itemdata_new
 {
-    empty = 0,
-    rook = 1,
-    bishop = 2,
-    knight = 3,
-    king = 4,
-    queen = 5,
-    jack = 6,
-    ace = 7,
-    enemy = 8,
-    hole = 9
+    empty = '0',
+    hole = '1',
+    playerR = '2',
+    playerB = '3',
+    playerN = '4',
+    P = 'p',
+    R = 'r',
+    B = 'b',
+    N = 'n',
+    Q = 'q',
+    K = 'k'
 }
 
 public class ProtoManager : MonoBehaviour
 {
     //스테이지 정보
-    public string[] Stages;//스테이지 데이터 배열
-    public string[] FlavorText;//스테이지 이름 목록
-    public int[] BestRes;//스테이지별 최저 이동수
+    public List<string> Stages;//스테이지 데이터 배열
+    public List<string> FlavorText;//스테이지 이름 목록
+    public List<int> BestRes;//스테이지별 최저 이동수
     private int nowStage;//현재 스테이지 넘버
 
     //맵 생성
@@ -40,7 +41,7 @@ public class ProtoManager : MonoBehaviour
     public float movespeed;//플레이어 이동 속도
     public GameObject destination;//플레이어 목적지
     public bool moving;//플레이어 이동중인지 확인, 도착시 false
-    public int playerstate;//현재 플레이어 말 상태
+    public int playerstate;//현재 플레이어 말 상태; 2,3,4 룩,비숍,나이트
     private bool aceSelecting; //에이스 선택중인지 확인하는 논리값
 
     //판넬 이동
@@ -49,6 +50,10 @@ public class ProtoManager : MonoBehaviour
     public Transform TitleShowPos; //타이틀 판넬 보여주는 위치
     public Transform ResultAwayPos; //결과창 판넬 치우는 위치
     public Transform ResultShowPos; //결과창 판넬 보여주는 위치
+    public bool resultSaved;//저장하면 true
+    public bool resultEditing;//수정중에 true
+    public InputField FlavIF;//플레이버 입력창
+    public InputField BestResIF;//최고기록 입력창
 
     //판넬 UI
     public GameObject panel;//스테이지명 표시 판넬
@@ -72,7 +77,8 @@ public class ProtoManager : MonoBehaviour
     public float rotateSpeed;//룰렛 회전 속도
 
     /*맵 에딧 관련*/
-    public int nowitem;
+    public char nowitem;
+    public GameObject nowObj;
 
     /*장식 요소*/
 
@@ -105,17 +111,13 @@ public class ProtoManager : MonoBehaviour
     [Header("Stars")]
     public Color[] StarColor;//별 색상들
     public GameObject[] StarGraphics;//별 오브젝트들
+    public AudioSource ClearSor;
 
     //말 변화시 뿌려지는 파편 파티클 시스템
     [Header("ParticleSystem")]
     public GameObject particleManager;//파티클 매니저
     public ParticleSystem DebrisSystem;//파편 뿌리는 파티클 시스템
     public AudioSource DebrisSor;// 부서지는 소리 소스
-
-    //무너지는 효과음
-    public AudioSource ClearSor; //클리어 효과음 내는 오디오 소스
-    private bool isHole; //맵에 구멍이 1개라도 있으면 무너지는 소리를 내기위해 판정하는 논리값
-    public AudioSource BlockRumbleSor; //무너지는 효과음을 내는 오디오 소스
 
     //BGM 버튼
     public Renderer MusicButton; //음표 마크 렌더러, 음악 켜지거나 꺼지면 색상 바꾸기 위해 사용
@@ -131,8 +133,20 @@ public class ProtoManager : MonoBehaviour
 
     void Start()//값 초기화, 맵 큐브 정보 저장
     {
-        LoadMap();
-        isHole = false;
+        try
+        {
+            LoadMap();
+        }
+        catch
+        {
+            Stages = new List<string>();
+            Stages.Add("");
+            FlavorText = new List<string>();
+            FlavorText.Add("Lv.0");
+            BestRes = new List<int>();
+            BestRes.Add(999);
+            SaveSystem.SaveStage(this);
+        }
         aceSelecting = false;
         //fading = false;
         rouletteangle = 0;
@@ -148,6 +162,9 @@ public class ProtoManager : MonoBehaviour
             Cubes[i].GetComponent<cubeData>().index = i;//큐브 데이터에 인덱스 입력
         }
         itemActive = false;
+        nowitem = '0';
+        nowObj = GameObject.Instantiate(items[Data2Ind(nowitem)], Moves.transform.position, Quaternion.identity);
+        nowObj.SetActive(false);
     }
 
     // Update is called once per frame
@@ -223,14 +240,22 @@ public class ProtoManager : MonoBehaviour
         }
         DeSelectAll();//비선택 색상으로 바꿔주기
         readytoMove = false;
-        isHole = false;
         StringBuilder sb = new StringBuilder(stagedata);
         sb.Replace("\t", "");
         sb.Replace("\n", "");
         sb.Replace(" ", "");
+        if (stagedata.Length < 64)
+        {
+            for (int i = 0; i < 64 - stagedata.Length; i++)
+            {
+                sb.Append('1');
+                Debug.Log(sb.Length);
+            }
+        }
+        Stages[nowStage] = sb.ToString();
         for (int i = 0; i < 64; i++)
         {
-            SetGrid((itemdata) (sb[i] - '0'), i);
+            SetGrid(sb[i], i);
         }
         switch (playerstate)
         {
@@ -266,17 +291,18 @@ public class ProtoManager : MonoBehaviour
         rouletteParts[4].GetComponent<Renderer>().material = Gray;
         rouletteParts[5].GetComponent<Renderer>().material = Gray;
         Camera.main.backgroundColor = bgColors[nowStage % bgColors.Length];
-        if (isHole)
-        {
-            BlockRumbleSor.Play();
-        }
+        resultEditing = false;
+        resultSaved = false;
         if(OnStage != 3)
         {
             OnStage = 1;
         }
     }
-
-    void SetGrid(itemdata item, int index)//좌표로 아이템 가져오기
+    void SetGrid(int item, int index)
+    {
+        SetGrid((char)(item + '0'), index);
+    }
+    void SetGrid(char item, int index)//좌표로 아이템 가져오기
     {
         int alphabet = Mathf.FloorToInt(index / 8);
         int num = index - alphabet * 8;
@@ -284,69 +310,44 @@ public class ProtoManager : MonoBehaviour
         {
             Destroy(Mapobject[index]);//아이템 파괴
         }
-        if((int)item == 9)//구멍인 경우
+
+        switch (Data2Ind(item))
         {
-            if (OnStage != 3)
-            {
-                Cubes[index].SetActive(false);
-                Mapobject[index] = GameObject.Instantiate(items[(int)item], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
-                ParticleSystemRenderer ps = Mapobject[index].GetComponent<ParticleSystemRenderer>();
-                if ((alphabet + num) % 2 == 1)
+            case 0:
+                if (OnStage != 3)
                 {
-                    ps.material = black;
+                    Cubes[index].SetActive(false);
                 }
                 else
                 {
-                    ps.material = white;
+                    Cubes[index].GetComponent<Renderer>().material = trans;
                 }
-                Mapobject[index].GetComponent<ParticleSystem>().Play();
-                if (!isHole)
+                break;
+            case 1:
+                if ((alphabet + num) % 2 == 1)
                 {
-                    isHole = true;
+                    Cubes[index].GetComponent<Renderer>().material = black;
                 }
-            }
-            else
-            {
-                Cubes[index].GetComponent<Renderer>().material = trans;
-            }
-        }
-        else if ((int)item != 0)//빈칸이 아니면 아이템 소환
-        {
-            Mapobject[index] = GameObject.Instantiate(items[(int)item], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
-            if ((int)item > 0 && (int)item < 4)//플레이어 말 확인시
-            {
+                else
+                {
+                    Cubes[index].GetComponent<Renderer>().material = white;
+                }
+                break;
+            case 2:
+            case 3:
+            case 4:
                 playerindex = index;
-                playerstate = (int)item;
-                switch (playerstate)
-                {
-                    case 1:
-                        rouletteParts[0].GetComponent<Renderer>().material = white;
-                        rouletteParts[1].GetComponent<Renderer>().material = black;
-                        rouletteParts[2].GetComponent<Renderer>().material = black;
-                        break;
-                    case 2:
-                        rouletteParts[0].GetComponent<Renderer>().material = black;
-                        rouletteParts[1].GetComponent<Renderer>().material = white;
-                        rouletteParts[2].GetComponent<Renderer>().material = black;
-                        break;
-                    case 3:
-                        rouletteParts[0].GetComponent<Renderer>().material = black;
-                        rouletteParts[1].GetComponent<Renderer>().material = black;
-                        rouletteParts[2].GetComponent<Renderer>().material = white;
-                        break;
-                }
-            }
-        }
-        if(OnStage == 3 && (int)item == 0)//맵에딧 중에 칸을 배치한 경우
-        {
-            if ((alphabet + num) % 2 == 1)
-            {
-                Cubes[index].GetComponent<Renderer>().material = black;
-            }
-            else
-            {
-                Cubes[index].GetComponent<Renderer>().material = white;
-            }
+                playerstate = item - '0';
+                Mapobject[index] = GameObject.Instantiate(items[item - '0'], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
+                break;
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+                Mapobject[index] = GameObject.Instantiate(items[Data2Ind(item)], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
+                break;
         }
     }
 
@@ -462,7 +463,7 @@ public class ProtoManager : MonoBehaviour
         }
         switch (Mapobject[playerindex].GetComponent<itemData>().data)
         {
-            case 1://룩
+            case '2'://룩
                 bool doneR = false;
                 bool doneL = false;
                 bool doneU = false;
@@ -478,7 +479,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex + i);//선택하기
                             }
-                            else if (Mapobject[playerindex + i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex + i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneR = true;
                             }
@@ -498,7 +499,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex - i);//선택하기
                             }
-                            else if (Mapobject[playerindex - i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex - i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneL = true;
                             }
@@ -516,7 +517,7 @@ public class ProtoManager : MonoBehaviour
                         {
                             SelectCube(playerindex + 8 * i);//선택하기
                         }
-                        else if (Mapobject[playerindex + 8 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                        else if (Mapobject[playerindex + 8 * i].GetComponent<itemData>().data == '0')//구멍칸임
                         {
                             doneD = true;
                         }
@@ -533,7 +534,7 @@ public class ProtoManager : MonoBehaviour
                         {
                             SelectCube(playerindex - 8 * i);//선택하기
                         }
-                        else if (Mapobject[playerindex - 8 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                        else if (Mapobject[playerindex - 8 * i].GetComponent<itemData>().data == '0')//구멍칸임
                         {
                             doneU = true;
                         }
@@ -545,7 +546,7 @@ public class ProtoManager : MonoBehaviour
                     }
                 }
                 break;
-            case 2://비숍
+            case '3'://비숍
                 bool doneRU = false;
                 bool doneLU = false;
                 bool doneRD = false;
@@ -561,7 +562,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex - 7 * i);//선택하기
                             }
-                            else if (Mapobject[playerindex - 7 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex - 7 * i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneRU = true;
                             }
@@ -581,7 +582,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex - 9 * i);//선택하기
                             }
-                            else if (Mapobject[playerindex - 9 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex - 9 * i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneLU = true;
                             }
@@ -601,7 +602,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex + 9 * i);//선택하기
                             }
-                            else if (Mapobject[playerindex + 9 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex + 9 * i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneRD = true;
                             }
@@ -621,7 +622,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 SelectCube(playerindex + 7 * i);//선택하기
                             }
-                            else if (Mapobject[playerindex + 7 * i].GetComponent<itemData>().data == 9)//구멍칸임
+                            else if (Mapobject[playerindex + 7 * i].GetComponent<itemData>().data == '0')//구멍칸임
                             {
                                 doneLD = true;
                             }
@@ -634,7 +635,7 @@ public class ProtoManager : MonoBehaviour
                     }
                 }
                 break;
-            case 3://나이트
+            case '4'://나이트
                 for(int alpha = -2; alpha < 3; alpha++)
                 {
                     for(int num= -2; num < 3; num++)
@@ -664,13 +665,13 @@ public class ProtoManager : MonoBehaviour
             playerindex = destination.GetComponent<cubeData>().index;
             if (Mapobject[playerindex] != null)
             {
-                int itemtemp = Mapobject[playerindex].GetComponent<itemData>().data;
-                if (itemtemp > 3 && itemtemp < 9)
+                int itemtemp = Data2Ind(Mapobject[playerindex].GetComponent<itemData>().data);
+                if (itemtemp > 4 && itemtemp < 11)
                 {
-                    itemSave((itemdata)itemtemp);
+                    StepItem(itemtemp);
                 }
             }
-            SetGrid((itemdata) playerstate, playerindex);
+            SetGrid(playerstate, playerindex);
             Destroy(Mapobject[temp]);
             itemActive = true;
             for (int i = 0; i < Kings.Length; i++)
@@ -712,15 +713,15 @@ public class ProtoManager : MonoBehaviour
     void goCycle()//룰렛 목표 각도 조정
     {
         playerstate += cycleDir;
-        if (playerstate == 4)
+        if (playerstate == 5)
         {
-            playerstate = 1;
+            playerstate = 2;
         }
-        else if (playerstate == 0)
+        else if (playerstate == 1)
         {
-            playerstate = 3;
+            playerstate = 4;
         }
-        SetGrid((itemdata)playerstate, playerindex);
+        SetGrid(playerstate, playerindex);
         rouletteangle -= 120 * cycleDir;
         switch (rouletteangle)
         {
@@ -747,42 +748,48 @@ public class ProtoManager : MonoBehaviour
         roulette.transform.rotation = Quaternion.Lerp(roulette.transform.rotation, Quaternion.Euler(0, rouletteangle, 0), Time.deltaTime * rotateSpeed);
     }
 
-    void itemSave(itemdata dat)//맵 아이템 획득 후 정보 저장, 슬롯 표기
+    void StepItem(int dat)//맵 아이템 밟음
     {
+        if (dat > 4)
+        {
+            KillEnemy();
+        }
+        /*
         switch (dat)
         {
-            case itemdata.king:
+            case '4':
                 Kings[kingInd].SetActive(true);
                 kingInd++;
                 break;
-            case itemdata.queen:
+            case '5':
                 Queens[queenInd].SetActive(true);
                 queenInd++;
                 break;
-            case itemdata.jack:
+            case '6':
                 Jacks[jackInd].SetActive(true);
                 jackInd++;
                 break;
-            case itemdata.ace:
+            case '7':
                 Aces[aceInd].SetActive(true);
                 aceInd++;
                 break;
-            case itemdata.enemy:
+            case '8':
                 KillEnemy();
                 break;
-        }
+        }*/
     }
 
-    void itemWork(itemdata dat)//아이템 사용시 효과 발동
+    void itemWork(char dat)//아이템 사용시 효과 발동
     {
         itemSor.Play();
         switch (dat)
         {
-            case itemdata.king:
+            /*
+            case itemdata_new.king:
                 kingInd--;
                 Kings[kingInd].SetActive(false);
                 break;
-            case itemdata.queen:
+            case itemdata_new.queen:
                 cycleDir *= -1;
                 dirArrow.transform.localScale = new Vector3(cycleDir * -6.5f, 6.5f, 6.5f);
                 if (cycleDir == 1)
@@ -797,7 +804,7 @@ public class ProtoManager : MonoBehaviour
                 Queens[queenInd].SetActive(false);
                 goCycle();
                 break;
-            case itemdata.jack:
+            case itemdata_new.jack:
                 int alphabet;
                 int no;
                 alphabet = 7 - Mathf.FloorToInt(playerindex / 8);
@@ -811,7 +818,7 @@ public class ProtoManager : MonoBehaviour
                 goCycle();
                 Invoke("goCycle", 0.2f);
                 break;
-            case itemdata.ace:
+            case itemdata_new.ace:
                 aceInd--;
                 Aces[aceInd].SetActive(false);
                 aceSelecting = true;
@@ -825,6 +832,7 @@ public class ProtoManager : MonoBehaviour
                 rouletteParts[5].GetComponent<Renderer>().material = Gold;
                 SelectAce();
                 break;
+            */
         }
     }
 
@@ -862,17 +870,19 @@ public class ProtoManager : MonoBehaviour
             ClearSor.Play();
             if (int.Parse(resultbox.text) < BestRes[nowStage - 1])
             {
-                resultComment.text = "You've just beat the record of developer!";
+                resultComment.text = "New Record!!!";
                 StarGraphics[0].SetActive(true);
                 StarGraphics[0].GetComponent<Renderer>().material.color = StarColor[3];
                 StarGraphics[1].SetActive(true);
                 StarGraphics[1].GetComponent<Renderer>().material.color = StarColor[3];
                 StarGraphics[2].SetActive(true);
                 StarGraphics[2].GetComponent<Renderer>().material.color = StarColor[3];
+                BestRes[nowStage - 1] = int.Parse(resultbox.text);
+                SaveSystem.SaveStage(this);
             }
             else if (int.Parse(resultbox.text) == BestRes[nowStage - 1])
             {
-                resultComment.text = "Excellent move!";
+                resultComment.text = "Excellent move!!";
                 StarGraphics[0].SetActive(true);
                 StarGraphics[0].GetComponent<Renderer>().material.color = StarColor[2];
                 StarGraphics[1].SetActive(true);
@@ -891,7 +901,7 @@ public class ProtoManager : MonoBehaviour
             }
             else if (int.Parse(resultbox.text) - BestRes[nowStage - 1] < 6)
             {
-                resultComment.text = "Nice move!";
+                resultComment.text = "Nice move";
                 StarGraphics[0].SetActive(true);
                 StarGraphics[0].GetComponent<Renderer>().material.color = StarColor[0];
                 StarGraphics[1].SetActive(false);
@@ -907,7 +917,7 @@ public class ProtoManager : MonoBehaviour
         }
         resultPanel.transform.position = Vector3.Lerp(resultPanel.gameObject.transform.position, ResultShowPos.position, Time.deltaTime * panelSpeed);
         resultPanel.transform.localScale = Vector3.Lerp(resultPanel.gameObject.transform.localScale, ResultShowPos.localScale, Time.deltaTime * panelSpeed);
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !resultEditing && resultSaved)
         {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -939,27 +949,29 @@ public class ProtoManager : MonoBehaviour
                 {
                     switch (hit.transform.gameObject.tag)
                     {
+                        /*
                         case "King":
                             DeActItems();
-                            itemWork(itemdata.king);
+                            itemWork(itemdata_new.king);
                             SelectMove();
                             return;
                         case "Queen":
                             DeActItems();
-                            itemWork(itemdata.queen);
+                            itemWork(itemdata_new.queen);
                             SelectMove();
                             return;
                         case "Jack":
                             DeActItems();
-                            itemWork(itemdata.jack);
+                            itemWork(itemdata_new.jack);
                             Invoke("SelectMove", 0.3f);
                             return;
                         case "Ace":
                             DeActItems();
-                            itemWork(itemdata.ace);
+                            itemWork(itemdata_new.ace);
                             return;
                         default:
                             break;
+                        */
                     }
                 }
                 if(hit.transform.gameObject.name == "MusicButton" || hit.transform.gameObject.name == "MapEditButton")
@@ -992,7 +1004,7 @@ public class ProtoManager : MonoBehaviour
         Ecount = 0;
         for(int i = 0; i < Mapobject.Length; i++)
         {
-            if(Mapobject[i] != null && Mapobject[i].GetComponent<itemData>().data == 8)
+            if(Mapobject[i] != null && Data2Ind(Mapobject[i].GetComponent<itemData>().data) > 4)
             {
                 Ecount++;
             }
@@ -1057,7 +1069,7 @@ public class ProtoManager : MonoBehaviour
                     case "RookCircle":
                         playerstate = 1;
                         rouletteangle = 0;
-                        SetGrid((itemdata)playerstate, playerindex);
+                        SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = white;
                         rouletteParts[1].GetComponent<Renderer>().material = black;
                         rouletteParts[2].GetComponent<Renderer>().material = black;
@@ -1070,7 +1082,7 @@ public class ProtoManager : MonoBehaviour
                     case "BishopCircle":
                         playerstate = 2;
                         rouletteangle = -120;
-                        SetGrid((itemdata)playerstate, playerindex);
+                        SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = black;
                         rouletteParts[1].GetComponent<Renderer>().material = white;
                         rouletteParts[2].GetComponent<Renderer>().material = black;
@@ -1083,7 +1095,7 @@ public class ProtoManager : MonoBehaviour
                     case "KnightCircle":
                         playerstate = 3;
                         rouletteangle = -240;
-                        SetGrid((itemdata)playerstate, playerindex);
+                        SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = black;
                         rouletteParts[1].GetComponent<Renderer>().material = black;
                         rouletteParts[2].GetComponent<Renderer>().material = white;
@@ -1162,6 +1174,7 @@ public class ProtoManager : MonoBehaviour
                         EditButton.material = white;
                         SetStage(Stages[nowStage]);
                         Camera.main.backgroundColor = Color.black;
+                        nowObj.SetActive(true);
                     }
                     else
                     {
@@ -1169,6 +1182,7 @@ public class ProtoManager : MonoBehaviour
                         OnStage = 0;
                         EditButton.material = black;
                         Camera.main.backgroundColor = bgColors[nowStage % bgColors.Length];
+                        nowObj.SetActive(false);
                     }
                 }
             }
@@ -1177,14 +1191,58 @@ public class ProtoManager : MonoBehaviour
 
     void MapEdit()
     {
+        if (nowObj.GetComponent<itemData>() && nowObj.GetComponent<itemData>().data != nowitem)
+        {
+            Destroy(nowObj);
+            nowObj = GameObject.Instantiate(items[Data2Ind(nowitem)], Moves.transform.position, Quaternion.identity);
+        }
+
         if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
         {
-            nowitem = 0;
+            nowitem = '0';
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9))
+        else if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
         {
-            nowitem = 9;
+            nowitem = '1';
         }
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+        {
+            nowitem = '2';
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+        {
+            nowitem = '3';
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
+        {
+            nowitem = '4';
+        }
+        else if (Input.GetKeyDown(KeyCode.P))
+        {
+            nowitem = 'p';
+        }
+        else if (Input.GetKeyDown(KeyCode.R))
+        {
+            nowitem = 'r';
+        }
+        else if (Input.GetKeyDown(KeyCode.B))
+        {
+            nowitem = 'b';
+        }
+        else if (Input.GetKeyDown(KeyCode.N))
+        {
+            nowitem = 'n';
+        }
+        else if (Input.GetKeyDown(KeyCode.Q))
+        {
+            nowitem = 'q';
+        }
+        else if (Input.GetKeyDown(KeyCode.K))
+        {
+            nowitem = 'k';
+        }
+
+
 
         if (Input.GetMouseButton(0))
         {
@@ -1195,17 +1253,9 @@ public class ProtoManager : MonoBehaviour
                 if (hit.transform.gameObject.tag == "cube")
                 {
                     int targetInd = hit.transform.gameObject.GetComponent<cubeData>().index;
-                    SetGrid((itemdata)nowitem, targetInd);
-
+                    SetGrid(nowitem, targetInd);
                     StringBuilder sb = new StringBuilder(Stages[nowStage]);
-                    sb.Replace("\t", "");
-                    sb.Replace("\n", "");
-                    sb.Replace(" ", "");
-                    for (int i = 0; i < 64; i++)
-                    {
-                        SetGrid((itemdata)(sb[i] - '0'), i);
-                    }
-                    sb[targetInd] = (char)(nowitem + (int)'0');
+                    sb[targetInd] = nowitem;
                     Stages[nowStage] = sb.ToString();
                 }
             }
@@ -1216,6 +1266,116 @@ public class ProtoManager : MonoBehaviour
     {
         DataSaver data = SaveSystem.LoadStage();
 
-        Stages = data.mapdata;
+        Stages = data.Stages;
+        BestRes = data.BestRes;
+        FlavorText = data.FlavorText;
+    }
+
+    int Data2Ind(char dat)
+    {
+        switch (dat)
+        {
+            case '0':
+                return 0;
+            case '1':
+                return 1;
+            case '2':
+                return 2;
+            case '3':
+                return 3;
+            case '4':
+                return 4;
+            case 'p':
+                return 5;
+            case 'r':
+                return 6;
+            case 'b':
+                return 7;
+            case 'n':
+                return 8;
+            case 'q':
+                return 9;
+            case 'k':
+                return 10;
+            default:
+                return 1;
+        }
+    }
+    char Ind2Data(int dat)
+    {
+        switch (dat)
+        {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                return (char)(dat+'0');
+            case 5:
+                return 'p';
+            case 6:
+                return 'r';
+            case 7:
+                return 'b';
+            case 8:
+                return 'n';
+            case 9:
+                return 'q';
+            case 10:
+                return 'k';
+            default:
+                return '1';
+        }
+    }
+
+    public void SaveResult()
+    {
+        FlavorText[nowStage - 1] = FlavIF.text;
+        int temp;
+        if (int.TryParse(BestResIF.text, out temp))
+        {
+            BestRes[nowStage - 1] = int.Parse(BestResIF.text);
+        }
+        SaveSystem.SaveStage(this);
+        if (nowStage >= Stages.Count)
+        {
+            Stages.Add("");
+            BestRes.Add(999);
+            FlavorText.Add("Lv. " + nowStage);
+            Debug.Log(Stages[nowStage]);
+            Debug.Log(BestRes[nowStage]);
+            Debug.Log(FlavorText[nowStage]);
+        }
+        resultSaved = true;
+    }
+
+    public void EditResult()
+    {
+        if (!resultEditing)
+        {
+            resultEditing = true;
+            BestResIF.gameObject.SetActive(true);
+            BestResIF.text = BestRes[nowStage - 1].ToString();
+            bestResBox.gameObject.SetActive(false);
+            FlavIF.gameObject.SetActive(true);
+            FlavIF.text = FlavorText[nowStage - 1];
+            resultComment.gameObject.SetActive(false);
+        }
+        else
+        {
+            FlavorText[nowStage - 1] = FlavIF.text;
+            int temp;
+            if (int.TryParse(BestResIF.text, out temp))
+            {
+                BestRes[nowStage - 1] = int.Parse(BestResIF.text);
+            }
+            SaveSystem.SaveStage(this);
+            ShowResult();
+            resultEditing = false;
+            BestResIF.gameObject.SetActive(false);
+            bestResBox.gameObject.SetActive(true);
+            FlavIF.gameObject.SetActive(false);
+            resultComment.gameObject.SetActive(true);
+        }
     }
 }
