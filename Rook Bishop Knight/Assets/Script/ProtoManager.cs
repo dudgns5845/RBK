@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 enum itemdata_new
 {
@@ -54,6 +55,7 @@ public class ProtoManager : MonoBehaviour
     public bool resultEditing;//수정중에 true
     public InputField FlavIF;//플레이버 입력창
     public InputField BestResIF;//최고기록 입력창
+    public InputField changeStageNo;//이동할 스테이지 입력창
 
     //판넬 UI
     public GameObject panel;//스테이지명 표시 판넬
@@ -207,6 +209,7 @@ public class ProtoManager : MonoBehaviour
         RotateRoulette();//룰렛 각도 목표 각도로 돌리기
         MusicClick();//음악버튼 눌렀는지 확인
         MapEditClick();//맵에딧 버튼 눌렸는지 확인
+        ChangeStage();//esc 눌러서 스테이지 변경
 
         /*
         if (StartPanel != null)
@@ -249,7 +252,6 @@ public class ProtoManager : MonoBehaviour
             for (int i = 0; i < 64 - stagedata.Length; i++)
             {
                 sb.Append('1');
-                Debug.Log(sb.Length);
             }
         }
         Stages[nowStage] = sb.ToString();
@@ -939,7 +941,7 @@ public class ProtoManager : MonoBehaviour
 
     void ClickButton()//버튼 클릭시 어딜 눌렀는지에 따라 처리
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && EventSystem.current.currentSelectedGameObject == null)
         {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -1342,9 +1344,6 @@ public class ProtoManager : MonoBehaviour
             Stages.Add("");
             BestRes.Add(999);
             FlavorText.Add("Lv. " + nowStage);
-            Debug.Log(Stages[nowStage]);
-            Debug.Log(BestRes[nowStage]);
-            Debug.Log(FlavorText[nowStage]);
         }
         resultSaved = true;
     }
@@ -1376,6 +1375,31 @@ public class ProtoManager : MonoBehaviour
             bestResBox.gameObject.SetActive(true);
             FlavIF.gameObject.SetActive(false);
             resultComment.gameObject.SetActive(true);
+        }
+    }
+
+    public void ChangeStage()
+    {
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            if (msgbox.gameObject.activeSelf)
+            {
+                msgbox.gameObject.SetActive(false);
+                changeStageNo.gameObject.SetActive(true);
+                changeStageNo.placeholder.GetComponent<Text>().text = (Stages.Count - 1).ToString();
+            }
+            else
+            {
+                int temp;
+                if (int.TryParse(changeStageNo.text, out temp) && int.Parse(changeStageNo.text) < Stages.Count && OnStage != 3)
+                {
+                    nowStage = int.Parse(changeStageNo.text);
+                    resultbox.text = "0";
+                    OnStage = 0;
+                }
+                msgbox.gameObject.SetActive(true);
+                changeStageNo.gameObject.SetActive(false);
+            }
         }
     }
 }
