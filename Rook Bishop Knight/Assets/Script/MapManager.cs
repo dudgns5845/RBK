@@ -18,6 +18,7 @@ enum itemdata
     hole = 9
 }
 */
+/*
 public class MapManager : MonoBehaviour
 {
     public string dummydata;
@@ -120,7 +121,7 @@ public class MapManager : MonoBehaviour
             {
                 Cubes[i].GetComponent<Renderer>().material = black;
             }
-        }*/
+        }
         for(int i = 0; i < 64; i++)
         {
             Cubes[i].GetComponent<cubeData>().index = Mathf.FloorToInt(i / 8) + 8 * (7 - (i % 8));
@@ -1061,4 +1062,4 @@ public class MapManager : MonoBehaviour
         }
 
     }
-}
+}*/

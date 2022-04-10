@@ -31,7 +31,7 @@ public class ProtoManager : MonoBehaviour
     //맵 생성
     public GameObject[] Cubes; //맵에 있는 큐브 오브젝트
     public Transform origin; //a8 큐브 위치, 구멍 파괴 이펙트 붙여넣기에 사용
-    private GameObject[] Mapobject;//목적지, 아이템, 플레이어 위치 데이터
+    public GameObject[] Mapobject;//목적지, 아이템, 플레이어 위치 데이터
     public GameObject[] items;//맵에 표시되는 아이템 프리펩
     public bool firstmove;//첫 이동이면 true, 첫번째 클릭은 말을 바꾸지 않음
 
@@ -209,7 +209,7 @@ public class ProtoManager : MonoBehaviour
         RotateRoulette();//룰렛 각도 목표 각도로 돌리기
         MusicClick();//음악버튼 눌렀는지 확인
         MapEditClick();//맵에딧 버튼 눌렸는지 확인
-        ChangeStage();//esc 눌러서 스테이지 변경
+        ChangeStage();//F1 눌러서 스테이지 변경
 
         /*
         if (StartPanel != null)
@@ -477,13 +477,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if (Mathf.FloorToInt((playerindex + i) / 8) == alphabet)//같은 알파벳 줄 확인
                         {
-                            if (Mapobject[playerindex + i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex + i);//선택하기
-                            }
-                            else if (Mapobject[playerindex + i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex + i].activeSelf == false)//구멍칸임
                             {
                                 doneR = true;
+                            }
+                            else if (Mapobject[playerindex + i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex + i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -497,13 +497,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if (Mathf.FloorToInt((playerindex - i) / 8) == alphabet)//같은 알파벳 줄 확인
                         {
-                            if (Mapobject[playerindex - i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex - i);//선택하기
-                            }
-                            else if (Mapobject[playerindex - i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex - i].activeSelf == false)//구멍칸임
                             {
                                 doneL = true;
+                            }
+                            else if(Mapobject[playerindex - i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex - i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -515,13 +515,13 @@ public class ProtoManager : MonoBehaviour
                     //아래 스캔
                     if (playerindex + 8 * i < Mapobject.Length && !doneD)//총 길이를 벗어나지 않는 범위
                     {
-                        if (Mapobject[playerindex + 8 * i] == null)//빈칸인가?
-                        {
-                            SelectCube(playerindex + 8 * i);//선택하기
-                        }
-                        else if (Mapobject[playerindex + 8 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                        if (Cubes[playerindex + 8 * i].activeSelf == false)//구멍칸임
                         {
                             doneD = true;
+                        }
+                        else if(Mapobject[playerindex + 8 * i] == null)//빈칸인가?
+                        {
+                            SelectCube(playerindex + 8 * i);//선택하기
                         }
                         else//구멍칸은 아님, 아이템칸임
                         {
@@ -532,13 +532,13 @@ public class ProtoManager : MonoBehaviour
                     //위 스캔
                     if (playerindex - 8 * i > -1 && !doneU)//총 길이를 벗어나지 않는 범위
                     {
-                        if (Mapobject[playerindex - 8 * i] == null)//빈칸인가?
-                        {
-                            SelectCube(playerindex - 8 * i);//선택하기
-                        }
-                        else if (Mapobject[playerindex - 8 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                        if (Cubes[playerindex - 8 * i].activeSelf == false)//구멍칸임
                         {
                             doneU = true;
+                        }
+                        else if(Mapobject[playerindex - 8 * i] == null)//빈칸인가?
+                        {
+                            SelectCube(playerindex - 8 * i);//선택하기
                         }
                         else//구멍칸은 아님, 아이템칸임
                         {
@@ -560,13 +560,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if ((Mathf.FloorToInt(playerindex / 8) + playerindex) % 2 == (Mathf.FloorToInt((playerindex - 7 * i) / 8) + (playerindex - 7 * i) % 8) % 2)
                         {
-                            if (Mapobject[playerindex - 7 * i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex - 7 * i);//선택하기
-                            }
-                            else if (Mapobject[playerindex - 7 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex - 7 * i].activeSelf == false)//구멍칸임
                             {
                                 doneRU = true;
+                            }
+                            else if(Mapobject[playerindex - 7 * i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex - 7 * i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -580,13 +580,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if ((Mathf.FloorToInt(playerindex/8)+playerindex)%2 == (Mathf.FloorToInt((playerindex - 9 * i) / 8) + (playerindex - 9 * i) % 8) % 2)
                         {
-                            if (Mapobject[playerindex - 9 * i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex - 9 * i);//선택하기
-                            }
-                            else if (Mapobject[playerindex - 9 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex - 9 * i].activeSelf == false)//구멍칸임
                             {
                                 doneLU = true;
+                            }
+                            else if(Mapobject[playerindex - 9 * i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex - 9 * i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -600,13 +600,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if ((Mathf.FloorToInt(playerindex / 8) + playerindex) % 2 == (Mathf.FloorToInt((playerindex + 9 * i) / 8) + (playerindex + 9 * i) % 8) % 2)
                         {
-                            if (Mapobject[playerindex + 9 * i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex + 9 * i);//선택하기
-                            }
-                            else if (Mapobject[playerindex + 9 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex + 9 * i].activeSelf == false)//구멍칸임
                             {
                                 doneRD = true;
+                            }
+                            else if(Mapobject[playerindex + 9 * i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex + 9 * i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -620,13 +620,13 @@ public class ProtoManager : MonoBehaviour
                     {
                         if ((Mathf.FloorToInt(playerindex / 8) + playerindex) % 2 == (Mathf.FloorToInt((playerindex + 7 * i) / 8) + (playerindex + 7 * i) % 8) % 2)
                         {
-                            if (Mapobject[playerindex + 7 * i] == null)//빈칸인가?
-                            {
-                                SelectCube(playerindex + 7 * i);//선택하기
-                            }
-                            else if (Mapobject[playerindex + 7 * i].GetComponent<itemData>().data == '0')//구멍칸임
+                            if (Cubes[playerindex + 7 * i].activeSelf == false)//구멍칸임
                             {
                                 doneLD = true;
+                            }
+                            else if(Mapobject[playerindex + 7 * i] == null)//빈칸인가?
+                            {
+                                SelectCube(playerindex + 7 * i);//선택하기
                             }
                             else//구멍칸은 아님, 아이템칸임
                             {
@@ -1400,6 +1400,9 @@ public class ProtoManager : MonoBehaviour
                 msgbox.gameObject.SetActive(true);
                 changeStageNo.gameObject.SetActive(false);
             }
+        } else if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
         }
     }
 }
