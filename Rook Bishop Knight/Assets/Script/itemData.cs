@@ -5,4 +5,5 @@ using UnityEngine;
 public class itemData : MonoBehaviour
 {
     public char data;
+    public int gimmickInd;
 }

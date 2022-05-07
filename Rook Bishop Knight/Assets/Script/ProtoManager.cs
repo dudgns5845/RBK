@@ -71,12 +71,13 @@ public class ProtoManager : MonoBehaviour
 
 
     //룰렛 구성, 회전
-    private int cycleDir;//사이클 도는 방향, 1이 정방향
+    //private int cycleDir;//사이클 도는 방향, 1이 정방향 -> roulCon.GetInteger("onward")로 대체됨
     public GameObject dirArrow;//방향 가르키는 화살표
     public GameObject roulette;//룰렛
     public GameObject[] rouletteParts;//룰렛에 있는 말 모델들
-    private int rouletteangle;//룰렛 목표 각도
-    public float rotateSpeed;//룰렛 회전 속도
+    public Animator roulCon;
+    //private int roulettepos;//룰렛 목표 위치
+    public float rotateSpeed;//룰렛 이동 속도
 
     /*맵 에딧 관련*/
     public char nowitem;
@@ -98,7 +99,7 @@ public class ProtoManager : MonoBehaviour
     public AudioSource itemSor;//아이템 사용 효과음 소스
 
     //맵 오브젝트들이 사용하는 매터리얼
-    [Header ("Material")]
+    [Header("Material")]
     public Material white;
     public Material black;
     public Material selectedWhite;//선택된 흰칸
@@ -130,6 +131,14 @@ public class ProtoManager : MonoBehaviour
     //배경 skybox 색상들
     public Color[] bgColors;//배경 색상들
 
+    //기믹 관련
+    public int nowG;  //-1이면 선택 없음
+    public GameObject GimmickPanel;//기믹 선택창
+    public List<int[]> Gimmicks;//기믹맵 전체 저장소
+    public GameObject[] GimmickObject;//생성되는 기믹 이펙트 배열
+    public GameObject[] MapGimmickObject;//현재 맵 기믹 이펙트 상태
+    public GimmickManager GM;
+    public int extraDir;
 
 
 
@@ -137,12 +146,24 @@ public class ProtoManager : MonoBehaviour
     {
         try
         {
+            Stages = new List<string>();
+            Stages.Add("");
+            Gimmicks = new List<int[]>();
+            int[] temp = new int[64];
+            Gimmicks.Add(temp);
+            FlavorText = new List<string>();
+            FlavorText.Add("Lv.0");
+            BestRes = new List<int>();
+            BestRes.Add(999);
             LoadMap();
         }
         catch
         {
             Stages = new List<string>();
             Stages.Add("");
+            Gimmicks = new List<int[]>();
+            int[] temp = new int[64];
+            Gimmicks.Add(temp);
             FlavorText = new List<string>();
             FlavorText.Add("Lv.0");
             BestRes = new List<int>();
@@ -151,14 +172,16 @@ public class ProtoManager : MonoBehaviour
         }
         aceSelecting = false;
         //fading = false;
-        rouletteangle = 0;
+        roulCon = roulette.GetComponent<Animator>();
+        roulCon.SetInteger("roulettepos", 2);
+        roulCon.SetInteger("onward", 1);
         firstmove = true;
         Mapobject = new GameObject[64];
         readytoMove = false;
-        playerstate = 1;
-        cycleDir = 1;
+        playerstate = 2;
+        roulCon.SetInteger("onward", 1);
         OnStage = 0;
-        for(int i = 0; i < 64; i++)
+        for (int i = 0; i < 64; i++)
         {
             //Cubes[i].GetComponent<cubeData>().index = Mathf.FloorToInt(i / 8) + 8 * (7 - (i % 8));
             Cubes[i].GetComponent<cubeData>().index = i;//큐브 데이터에 인덱스 입력
@@ -166,7 +189,10 @@ public class ProtoManager : MonoBehaviour
         itemActive = false;
         nowitem = '0';
         nowObj = GameObject.Instantiate(items[Data2Ind(nowitem)], Moves.transform.position, Quaternion.identity);
+        nowG = -1;
         nowObj.SetActive(false);
+        GimmickPanel.SetActive(false);
+        MapGimmickObject = new GameObject[64];
     }
 
     // Update is called once per frame
@@ -202,11 +228,10 @@ public class ProtoManager : MonoBehaviour
             MapEdit();
         }
 
-        if(OnStage != 2)//클리어가 아닌경우엔 결과창 치워두기
+        if (OnStage != 2)//클리어가 아닌경우엔 결과창 치워두기
         {
             RemoveResult();
         }
-        RotateRoulette();//룰렛 각도 목표 각도로 돌리기
         MusicClick();//음악버튼 눌렀는지 확인
         MapEditClick();//맵에딧 버튼 눌렸는지 확인
         ChangeStage();//F1 눌러서 스테이지 변경
@@ -221,9 +246,9 @@ public class ProtoManager : MonoBehaviour
 
     void SetStage(string stagedata)//스테이지 시작시 데이터를 받아 스테이지를 구성
     {
-        for(int i = 0; i < 64; i++)
+        for (int i = 0; i < 64; i++)
         {
-            if(Cubes[i].activeInHierarchy == false)//이전 스테이지에서 구멍이었던 부분 메우기
+            if (Cubes[i].activeInHierarchy == false)//이전 스테이지에서 구멍이었던 부분 메우기
             {
                 Cubes[i].SetActive(true);
                 int alphabet;
@@ -258,22 +283,23 @@ public class ProtoManager : MonoBehaviour
         for (int i = 0; i < 64; i++)
         {
             SetGrid(sb[i], i);
+            SetGimmick(Gimmicks[nowStage][i], i);
         }
         switch (playerstate)
         {
-            case 1:
-                rouletteangle = 0;
-                break;
             case 2:
-                rouletteangle = -120;
+                roulCon.SetInteger("roulettepos", 2);
                 break;
             case 3:
-                rouletteangle = -240;
+                roulCon.SetInteger("roulettepos", 3);
+                break;
+            case 4:
+                roulCon.SetInteger("roulettepos", 4);
                 break;
         }
-        cycleDir = 1;
+        roulCon.SetInteger("onward", 1);
         firstmove = true;
-        for(int i = 0; i < Kings.Length; i++)//사용 아이템 비활성화
+        for (int i = 0; i < Kings.Length; i++)//사용 아이템 비활성화
         {
             Kings[i].SetActive(false);
             Queens[i].SetActive(false);
@@ -284,8 +310,8 @@ public class ProtoManager : MonoBehaviour
         queenInd = 0;
         jackInd = 0;
         aceInd = 0;
-        dirArrow.transform.localScale = new Vector3(cycleDir * -6.5f, 6.5f, 6.5f);
-        dirArrow.GetComponent<Renderer>().material = Red;
+        //dirArrow.transform.localScale = new Vector3(cycleDir * -6.5f, 6.5f, 6.5f);
+        //dirArrow.GetComponent<Renderer>().material = Red;
         itemActive = false;
         Moves.text = "0";
         aceSelecting = false;
@@ -295,7 +321,7 @@ public class ProtoManager : MonoBehaviour
         Camera.main.backgroundColor = bgColors[nowStage % bgColors.Length];
         resultEditing = false;
         resultSaved = false;
-        if(OnStage != 3)
+        if (OnStage != 3)
         {
             OnStage = 1;
         }
@@ -359,7 +385,7 @@ public class ProtoManager : MonoBehaviour
         int num;
         alphabet = Mathf.FloorToInt(index / 8);
         num = index % 8;
-        if((alphabet + num) % 2 == 1)
+        if ((alphabet + num) % 2 == 1)
         {
             Cubes[index].GetComponent<Renderer>().material = selectedBlack;
             Cubes[index].GetComponent<cubeData>().selected = true;
@@ -373,7 +399,7 @@ public class ProtoManager : MonoBehaviour
 
     void DeSelectAll()//모든 칸 비선택 색상으로 변환
     {
-        for(int i = 0; i < 64; i++)
+        for (int i = 0; i < 64; i++)
         {
             if (Cubes[i].GetComponent<cubeData>().selected)
             {
@@ -501,7 +527,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 doneL = true;
                             }
-                            else if(Mapobject[playerindex - i] == null)//빈칸인가?
+                            else if (Mapobject[playerindex - i] == null)//빈칸인가?
                             {
                                 SelectCube(playerindex - i);//선택하기
                             }
@@ -519,7 +545,7 @@ public class ProtoManager : MonoBehaviour
                         {
                             doneD = true;
                         }
-                        else if(Mapobject[playerindex + 8 * i] == null)//빈칸인가?
+                        else if (Mapobject[playerindex + 8 * i] == null)//빈칸인가?
                         {
                             SelectCube(playerindex + 8 * i);//선택하기
                         }
@@ -536,7 +562,7 @@ public class ProtoManager : MonoBehaviour
                         {
                             doneU = true;
                         }
-                        else if(Mapobject[playerindex - 8 * i] == null)//빈칸인가?
+                        else if (Mapobject[playerindex - 8 * i] == null)//빈칸인가?
                         {
                             SelectCube(playerindex - 8 * i);//선택하기
                         }
@@ -564,7 +590,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 doneRU = true;
                             }
-                            else if(Mapobject[playerindex - 7 * i] == null)//빈칸인가?
+                            else if (Mapobject[playerindex - 7 * i] == null)//빈칸인가?
                             {
                                 SelectCube(playerindex - 7 * i);//선택하기
                             }
@@ -578,13 +604,13 @@ public class ProtoManager : MonoBehaviour
                     //왼쪽 위 스캔
                     if (playerindex - 9 * i > -1 && !doneLU)//총 길이를 벗어나지 않는 범위
                     {
-                        if ((Mathf.FloorToInt(playerindex/8)+playerindex)%2 == (Mathf.FloorToInt((playerindex - 9 * i) / 8) + (playerindex - 9 * i) % 8) % 2)
+                        if ((Mathf.FloorToInt(playerindex / 8) + playerindex) % 2 == (Mathf.FloorToInt((playerindex - 9 * i) / 8) + (playerindex - 9 * i) % 8) % 2)
                         {
                             if (Cubes[playerindex - 9 * i].activeSelf == false)//구멍칸임
                             {
                                 doneLU = true;
                             }
-                            else if(Mapobject[playerindex - 9 * i] == null)//빈칸인가?
+                            else if (Mapobject[playerindex - 9 * i] == null)//빈칸인가?
                             {
                                 SelectCube(playerindex - 9 * i);//선택하기
                             }
@@ -604,7 +630,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 doneRD = true;
                             }
-                            else if(Mapobject[playerindex + 9 * i] == null)//빈칸인가?
+                            else if (Mapobject[playerindex + 9 * i] == null)//빈칸인가?
                             {
                                 SelectCube(playerindex + 9 * i);//선택하기
                             }
@@ -624,7 +650,7 @@ public class ProtoManager : MonoBehaviour
                             {
                                 doneLD = true;
                             }
-                            else if(Mapobject[playerindex + 7 * i] == null)//빈칸인가?
+                            else if (Mapobject[playerindex + 7 * i] == null)//빈칸인가?
                             {
                                 SelectCube(playerindex + 7 * i);//선택하기
                             }
@@ -638,13 +664,13 @@ public class ProtoManager : MonoBehaviour
                 }
                 break;
             case '4'://나이트
-                for(int alpha = -2; alpha < 3; alpha++)
+                for (int alpha = -2; alpha < 3; alpha++)
                 {
-                    for(int num= -2; num < 3; num++)
+                    for (int num = -2; num < 3; num++)
                     {
-                        if(playerindex + alpha * 8 + num > -1 && playerindex + alpha * 8 + num < 64)//총 길이를 벗어나지 않는 범위
+                        if (playerindex + alpha * 8 + num > -1 && playerindex + alpha * 8 + num < 64)//총 길이를 벗어나지 않는 범위
                         {
-                            if(Mathf.Abs(alpha) + Mathf.Abs(num) == 3)
+                            if (Mathf.Abs(alpha) + Mathf.Abs(num) == 3)
                             {
                                 if ((Mathf.FloorToInt(playerindex / 8) + playerindex) % 2 != (Mathf.FloorToInt((playerindex + alpha * 8 + num) / 8) + (playerindex + alpha * 8 + num) % 8) % 2)
                                 {
@@ -661,7 +687,7 @@ public class ProtoManager : MonoBehaviour
 
     void MovePiece()//플레이어 목표지로 이동, 아이템 획득, 다음 이동을 위한 아이템 활성화
     {
-        if(Mapobject[playerindex].transform.position == destination.transform.position)
+        if (Mapobject[playerindex].transform.position == destination.transform.position)
         {
             int temp = playerindex;
             playerindex = destination.GetComponent<cubeData>().index;
@@ -674,8 +700,9 @@ public class ProtoManager : MonoBehaviour
                 }
             }
             SetGrid(playerstate, playerindex);
+            Destroy(MapGimmickObject[temp]);
             Destroy(Mapobject[temp]);
-            itemActive = true;
+            /*itemActive = true;
             for (int i = 0; i < Kings.Length; i++)
             {
                 if (Kings[i].activeSelf)
@@ -702,7 +729,7 @@ public class ProtoManager : MonoBehaviour
                     Rends[0].material = Gold;
                     Rends[1].material = white;
                 }
-            }
+            }*/
             Mapobject[temp] = null;
             moving = false;
         }
@@ -710,44 +737,6 @@ public class ProtoManager : MonoBehaviour
         {
             Mapobject[playerindex].transform.position = Vector3.MoveTowards(Mapobject[playerindex].transform.position, destination.transform.position, Time.deltaTime * movespeed);
         }
-    }
-
-    void goCycle()//룰렛 목표 각도 조정
-    {
-        playerstate += cycleDir;
-        if (playerstate == 5)
-        {
-            playerstate = 2;
-        }
-        else if (playerstate == 1)
-        {
-            playerstate = 4;
-        }
-        SetGrid(playerstate, playerindex);
-        rouletteangle -= 120 * cycleDir;
-        switch (rouletteangle)
-        {
-            case 0:
-                rouletteParts[0].GetComponent<Renderer>().material = white;
-                rouletteParts[1].GetComponent<Renderer>().material = black;
-                rouletteParts[2].GetComponent<Renderer>().material = black;
-                break;
-            case -120:
-                rouletteParts[0].GetComponent<Renderer>().material = black;
-                rouletteParts[1].GetComponent<Renderer>().material = white;
-                rouletteParts[2].GetComponent<Renderer>().material = black;
-                break;
-            case -240:
-                rouletteParts[0].GetComponent<Renderer>().material = black;
-                rouletteParts[1].GetComponent<Renderer>().material = black;
-                rouletteParts[2].GetComponent<Renderer>().material = white;
-                break;
-        }
-    }
-
-    void RotateRoulette()//룰렛 목표각도로 회전
-    {
-        roulette.transform.rotation = Quaternion.Lerp(roulette.transform.rotation, Quaternion.Euler(0, rouletteangle, 0), Time.deltaTime * rotateSpeed);
     }
 
     void StepItem(int dat)//맵 아이템 밟음
@@ -840,7 +829,7 @@ public class ProtoManager : MonoBehaviour
 
     void ShowText()//레벨 타이틀 갱신, 보여주기
     {
-        if(msgbox.text != FlavorText[nowStage])
+        if (msgbox.text != FlavorText[nowStage])
         {
             msgbox.text = FlavorText[nowStage];
         }
@@ -976,7 +965,7 @@ public class ProtoManager : MonoBehaviour
                         */
                     }
                 }
-                if(hit.transform.gameObject.name == "MusicButton" || hit.transform.gameObject.name == "MapEditButton")
+                if (hit.transform.gameObject.name == "MusicButton" || hit.transform.gameObject.name == "MapEditButton")
                 {
                     return;
                 }
@@ -989,7 +978,7 @@ public class ProtoManager : MonoBehaviour
                 }
                 else
                 {
-                    goCycle();
+                    GoCycle();
                 }
                 SelectMove();
             }
@@ -998,15 +987,35 @@ public class ProtoManager : MonoBehaviour
                 CheckBlockClick();
             }
         }
-     }
+    }
+
+    public void GoCycle()
+    {
+        playerstate += roulCon.GetInteger("onward");
+        if(extraDir != 0)
+        {
+            playerstate += extraDir * roulCon.GetInteger("onward");
+            extraDir = 0;
+        }
+        if (playerstate > 4)
+        {
+            playerstate -= 3;
+        }
+        else if (playerstate < 2)
+        {
+            playerstate += 3;
+        }
+        SetGrid(playerstate, playerindex);
+        roulCon.SetInteger("roulettepos", playerstate);
+    }
 
     void KillEnemy()//적 유닛 잡았을 경우
     {
         int Ecount;
         Ecount = 0;
-        for(int i = 0; i < Mapobject.Length; i++)
+        for (int i = 0; i < Mapobject.Length; i++)
         {
-            if(Mapobject[i] != null && Data2Ind(Mapobject[i].GetComponent<itemData>().data) > 4)
+            if (Mapobject[i] != null && Data2Ind(Mapobject[i].GetComponent<itemData>().data) > 4)
             {
                 Ecount++;
             }
@@ -1015,6 +1024,10 @@ public class ProtoManager : MonoBehaviour
         {
             OnStage = 2;
             nowStage++;
+        }
+        else if (MapGimmickObject[playerindex] != null)
+        {
+            GM.ActivateGimmick(MapGimmickObject[playerindex].GetComponent<itemData>().gimmickInd);
         }
 
     }
@@ -1069,8 +1082,8 @@ public class ProtoManager : MonoBehaviour
                 switch (hit.transform.gameObject.name)
                 {
                     case "RookCircle":
-                        playerstate = 1;
-                        rouletteangle = 0;
+                        playerstate = 2;
+                        roulCon.SetInteger("roulettepos", 2);
                         SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = white;
                         rouletteParts[1].GetComponent<Renderer>().material = black;
@@ -1082,8 +1095,8 @@ public class ProtoManager : MonoBehaviour
                         aceSelecting = false;
                         return;
                     case "BishopCircle":
-                        playerstate = 2;
-                        rouletteangle = -120;
+                        playerstate = 3;
+                        roulCon.SetInteger("roulettepos", 3);
                         SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = black;
                         rouletteParts[1].GetComponent<Renderer>().material = white;
@@ -1095,8 +1108,8 @@ public class ProtoManager : MonoBehaviour
                         aceSelecting = false;
                         return;
                     case "KnightCircle":
-                        playerstate = 3;
-                        rouletteangle = -240;
+                        playerstate = 4;
+                        roulCon.SetInteger("roulettepos", 4);
                         SetGrid(playerstate, playerindex);
                         rouletteParts[0].GetComponent<Renderer>().material = black;
                         rouletteParts[1].GetComponent<Renderer>().material = black;
@@ -1110,7 +1123,7 @@ public class ProtoManager : MonoBehaviour
                 }
             }
         }
-     }
+    }
     void RetryClick()//재시도 클릭 확인
     {
         if (Input.GetMouseButtonDown(0) && OnStage != 3)
@@ -1121,7 +1134,7 @@ public class ProtoManager : MonoBehaviour
             {
                 if (hit.transform.gameObject.name == "Retry")
                 {
-                    if(OnStage == 2)
+                    if (OnStage == 2)
                     {
                         nowStage--;
                     }
@@ -1177,6 +1190,8 @@ public class ProtoManager : MonoBehaviour
                         SetStage(Stages[nowStage]);
                         Camera.main.backgroundColor = Color.black;
                         nowObj.SetActive(true);
+                        GimmickPanel.SetActive(true);
+                        panel.SetActive(false);
                     }
                     else
                     {
@@ -1185,6 +1200,8 @@ public class ProtoManager : MonoBehaviour
                         EditButton.material = black;
                         Camera.main.backgroundColor = bgColors[nowStage % bgColors.Length];
                         nowObj.SetActive(false);
+                        GimmickPanel.SetActive(false);
+                        panel.SetActive(true);
                     }
                 }
             }
@@ -1255,10 +1272,31 @@ public class ProtoManager : MonoBehaviour
                 if (hit.transform.gameObject.tag == "cube")
                 {
                     int targetInd = hit.transform.gameObject.GetComponent<cubeData>().index;
-                    SetGrid(nowitem, targetInd);
-                    StringBuilder sb = new StringBuilder(Stages[nowStage]);
-                    sb[targetInd] = nowitem;
-                    Stages[nowStage] = sb.ToString();
+                    if (nowG == -1)
+                    {
+                        if(nowitem == '2' || nowitem == '3' || nowitem == '4')
+                        {
+                            for(int i = 0; i < 64; i++)
+                            {
+                                if(Stages[nowStage][i]=='2' || Stages[nowStage][i] == '3' || Stages[nowStage][i] == '4')
+                                {
+                                    SetGrid('1', i);
+                                    StringBuilder sb2 = new StringBuilder(Stages[nowStage]);
+                                    sb2[i] = '1';
+                                    Stages[nowStage] = sb2.ToString();
+                                }
+                            }
+                        }
+                        SetGrid(nowitem, targetInd);
+                        StringBuilder sb = new StringBuilder(Stages[nowStage]);
+                        sb[targetInd] = nowitem;
+                        Stages[nowStage] = sb.ToString();
+                    }
+                    else if ((Mapobject[targetInd]!=null && targetInd != playerindex) || nowG == 0)
+                    {
+                        SetGimmick(nowG, targetInd);
+                        Gimmicks[nowStage][targetInd] = nowG;
+                    }
                 }
             }
         }
@@ -1269,6 +1307,7 @@ public class ProtoManager : MonoBehaviour
         DataSaver data = SaveSystem.LoadStage();
 
         Stages = data.Stages;
+        Gimmicks = data.Gimmick;
         BestRes = data.BestRes;
         FlavorText = data.FlavorText;
     }
@@ -1312,7 +1351,7 @@ public class ProtoManager : MonoBehaviour
             case 2:
             case 3:
             case 4:
-                return (char)(dat+'0');
+                return (char)(dat + '0');
             case 5:
                 return 'p';
             case 6:
@@ -1342,6 +1381,8 @@ public class ProtoManager : MonoBehaviour
         if (nowStage >= Stages.Count)
         {
             Stages.Add("");
+            int[] newG = new int[64];
+            Gimmicks.Add(newG);
             BestRes.Add(999);
             FlavorText.Add("Lv. " + nowStage);
         }
@@ -1400,9 +1441,24 @@ public class ProtoManager : MonoBehaviour
                 msgbox.gameObject.SetActive(true);
                 changeStageNo.gameObject.SetActive(false);
             }
-        } else if (Input.GetKeyDown(KeyCode.Escape))
+        }
+        else if (Input.GetKeyDown(KeyCode.Escape))
         {
             Application.Quit();
+        }
+    }
+
+    public void SetGimmick(int GimmickIndex, int MapIndex)
+    {
+        int alphabet = Mathf.FloorToInt(MapIndex / 8);
+        int num = MapIndex - alphabet * 8;
+        if (MapGimmickObject[MapIndex] != null)//좌표에 아이템 이미 있음
+        {
+            Destroy(MapGimmickObject[MapIndex]);//아이템 파괴
+        }
+        if (GimmickIndex != 0)
+        {
+            MapGimmickObject[MapIndex] = GameObject.Instantiate(GimmickObject[GimmickIndex], origin.position + Vector3.back * alphabet + Vector3.right * num, Quaternion.identity);
         }
     }
 }
