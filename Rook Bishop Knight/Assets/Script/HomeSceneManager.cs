@@ -29,10 +29,26 @@ public class HomeSceneManager : MonoBehaviour
     void UISetting()
     {
         //버튼에 이벤트 등록
-        btn_Start.onClick.AddListener(() => { btn_Start.gameObject.SetActive(false); btn_GamePlay.gameObject.SetActive(true); btn_MapEdit.gameObject.SetActive(true); });
-        btn_Exit.onClick.AddListener(() => Application.Quit());
-        btn_MapEdit.onClick.AddListener(() => SceneManager.LoadScene("01_Play"));
-        btn_GamePlay.onClick.AddListener(() => SceneManager.LoadScene("02_MapEdit"));
+        btn_Start.onClick.AddListener(() => { 
+            btn_Start.gameObject.SetActive(false); 
+            btn_GamePlay.gameObject.SetActive(true); 
+            btn_MapEdit.gameObject.SetActive(true);
+            SoundManager.instance.EFT_Play(EffectClips.BlockBreak);
+        });
+        btn_Exit.onClick.AddListener(() => { 
+            SoundManager.instance.EFT_Play(EffectClips.StageClear);
+            Application.Quit();
+        });
+        btn_MapEdit.onClick.AddListener(() => {
+            SceneManager.LoadScene("01_Play");
+            SoundManager.instance.EFT_Play(EffectClips.StageClear);
+        });
+        btn_GamePlay.onClick.AddListener(() => {
+            SceneManager.LoadScene("02_MapEdit");
+            SoundManager.instance.EFT_Play(EffectClips.StageClear);
+
+        });
+
         btn_Audio.onClick.AddListener(() =>
         {
             if (SoundManager.instance.isMute == false)

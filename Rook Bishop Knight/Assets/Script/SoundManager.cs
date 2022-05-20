@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// AudioSource ¸®½ºÆ®
@@ -105,6 +105,5 @@ public class SoundManager : MonoBehaviour
                 audio.mute = false;
             }
         }
-       
     }
 }

@@ -696,6 +696,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 8ff5f53c1ced07b4193c172a3f774c5e, type: 3}
   - {fileID: 8300000, guid: c21b178fff19b8e44bfeed68f09d65c2, type: 3}
   - {fileID: 8300000, guid: e4e7067771fa1594599ff3b662399850, type: 3}
+  isMute: 0
 --- !u!4 &462122151
 Transform:
   m_ObjectHideFlags: 0
@@ -1250,7 +1251,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
-  m_Volume: 1
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -2073,6 +2074,7 @@ MonoBehaviour:
   btn_Exit: {fileID: 1240851420}
   btn_MapEdit: {fileID: 1566801055}
   btn_GamePlay: {fileID: 1543348573}
+  btn_Audio: {fileID: 2016362322}
 --- !u!4 &1771589518
 Transform:
   m_ObjectHideFlags: 0
